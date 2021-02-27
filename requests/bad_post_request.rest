@@ -1,0 +1,22 @@
+POST http://localhost:3001/api/persons/
+Content-Type: application/json
+
+{
+	"number": "345-5343"
+}
+###
+POST http://localhost:3001/api/persons/
+Content-Type: application/json
+
+{
+	"name": "Sandro peirano"
+}
+###
+POST http://localhost:3001/api/persons/
+Content-Type: application/json
+
+{
+	"name": "Arto asdeHellas",
+	"number": "43"
+}
+
