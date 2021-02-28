@@ -2,8 +2,9 @@ const express = require("express");
 const app = express();
 const { v4: uuidv4 } = require("uuid");
 const morgan = require("morgan");
+const cors = require("cors");
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 let persons = [
   {
@@ -30,17 +31,23 @@ let persons = [
 
 // morgan config
 
-morgan.token("content", (req,res) => {
-	if (req.body) {
-		return JSON.stringify(req.body)
-	} else {
-		return ""
-	}
-})
+morgan.token("content", (req, res) => {
+  if (req.body) {
+    return JSON.stringify(req.body);
+  } else {
+    return "";
+  }
+});
 
 // middleware
+
 app.use(express.json());
-app.use(morgan(":method :url :status :res[content-length] - :response-time[3] ms :content"))
+app.use(
+  morgan(
+    ":method :url :status :res[content-length] - :response-time[3] ms :content"
+  )
+);
+app.use(cors())
 
 app.get("/info", (req, res) => {
   res.send(
