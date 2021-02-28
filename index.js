@@ -41,6 +41,7 @@ morgan.token("content", (req, res) => {
 
 // middleware
 
+app.use(express.static('build'))
 app.use(express.json());
 app.use(
   morgan(
