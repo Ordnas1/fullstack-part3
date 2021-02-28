@@ -1,33 +1,15 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const { v4: uuidv4 } = require("uuid");
 const morgan = require("morgan");
 const cors = require("cors");
+const mongoose = require("mongoose");
 
 const PORT = process.env.PORT || 3001;
+const url = process.env.MONGO_URI;
 
-let persons = [
-  {
-    name: "Arto Hellas",
-    number: "040-123457",
-    id: 1,
-  },
-  {
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-    id: 2,
-  },
-  {
-    name: "Dan Abramov",
-    number: "12-43-234345",
-    id: 3,
-  },
-  {
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-    id: 4,
-  },
-];
+const Person = require("./models/persons");
 
 // morgan config
 
@@ -41,63 +23,89 @@ morgan.token("content", (req, res) => {
 
 // middleware
 
-app.use(express.static('build'))
+app.use(express.static("build"));
 app.use(express.json());
 app.use(
   morgan(
     ":method :url :status :res[content-length] - :response-time[3] ms :content"
   )
 );
-app.use(cors())
+app.use(cors());
+
+console.info("Connecting to", url);
+
+mongoose
+  .connect(url, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useFindAndModify: false,
+    useCreateIndex: true,
+  })
+  .then((result) => {
+    console.log("connected to MongoDB");
+  })
+  .catch((error) => {
+    console.log("error connecting to MongoDB:", error.message);
+  });
 
 app.get("/info", (req, res) => {
-  res.send(
-    `<p>Phonebook has info on ${persons.length} people</p> <p>${new Date(
-      Date.now()
-    )}</p>`
-  );
+  Person.find({}).then(result => {
+    res.send(
+      `<p>Phonebook has info on ${result.length} people</p> <p>${new Date(
+        Date.now()
+      )}</p>`
+    );
+  })
+  
 });
 
-app.get("/api/persons/", (req, res) => {
-  res.json(persons);
+app.get("/api/persons/", (req, res, next) => {
+  Person.find({})
+    .then((result) => res.json(result))
+    .catch((err) => next(err));
 });
 
 app.get("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const person = persons[persons.findIndex((person) => person.id === id)];
-
-  if (person) {
-    res.json(person);
-  } else {
-    res.sendStatus(404).end();
-  }
+  Person.findById(req.params.id).then(person => res.json(person))
+  
 });
 
-app.delete("/api/persons/:id", (req, res) => {
-  const id = req.params.id
-  persons = persons.filter((person) => String(person.id) !== id);
-
-  res.sendStatus(204).end();
+app.delete("/api/persons/:id", (req, res, next) => {
+  const id = req.params.id;
+  Person.findByIdAndRemove(id)
+    .then((person) => res.sendStatus(204))
+    .catch((error) => next(error));
 });
 
 app.post("/api/persons", (req, res) => {
-  const person = req.body;
+  const person = new Person({
+    name: req.body.name,
+    number: req.body.number,
+  });
 
-  if (!req.body.name) {
-    res.status(400).json({ error: "Name not included" });
-    r;
-  } else if (!req.body.number) {
-    res.status(400).json({ error: "Number not included" });
-  } else if (
-    persons.filter((person) => person.name === req.body.name).length != 0
-  ) {
-    res.status(400).json({ error: "name already exists" });
-  } else {
-    person.id = uuidv4();
-    persons = persons.concat(person);
-    res.json(person);
-  }
+  person.save().then((person) => res.json(person));
 });
+
+app.put("/api/persons/:id", (req, res, next) => {
+  const updatedPerson = {
+    name: req.body.name,
+    number: req.body.number,
+  }
+
+  Person.findByIdAndUpdate(req.params.id, updatedPerson).then(
+    res.json(updatedPerson)
+  ).catch(err => next(err))
+});
+
+// error handler
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+
+  next(error);
+};
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.info(`Server running on port ${PORT}`);
