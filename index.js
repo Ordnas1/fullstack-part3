@@ -49,14 +49,13 @@ mongoose
   });
 
 app.get("/info", (req, res) => {
-  Person.find({}).then(result => {
+  Person.find({}).then((result) => {
     res.send(
       `<p>Phonebook has info on ${result.length} people</p> <p>${new Date(
         Date.now()
       )}</p>`
     );
-  })
-  
+  });
 });
 
 app.get("/api/persons/", (req, res, next) => {
@@ -66,8 +65,7 @@ app.get("/api/persons/", (req, res, next) => {
 });
 
 app.get("/api/persons/:id", (req, res) => {
-  Person.findById(req.params.id).then(person => res.json(person))
-  
+  Person.findById(req.params.id).then((person) => res.json(person));
 });
 
 app.delete("/api/persons/:id", (req, res, next) => {
@@ -77,30 +75,40 @@ app.delete("/api/persons/:id", (req, res, next) => {
     .catch((error) => next(error));
 });
 
-app.post("/api/persons", (req, res) => {
+app.post("/api/persons", (req, res, next) => {
   const person = new Person({
     name: req.body.name,
     number: req.body.number,
   });
 
-  person.save().then((person) => res.json(person));
+  person
+    .save()
+    .then((person) => res.json(person))
+    .catch((err) => next(err));
 });
 
 app.put("/api/persons/:id", (req, res, next) => {
   const updatedPerson = {
     name: req.body.name,
     number: req.body.number,
-  }
+  };
 
-  Person.findByIdAndUpdate(req.params.id, updatedPerson).then(
-    res.json(updatedPerson)
-  ).catch(err => next(err))
+  Person.findByIdAndUpdate(req.params.id, updatedPerson, {
+    runValidators: true,
+  })
+    .then(upd => res.json(upd))
+    .catch((err) => next(err));
 });
 
 // error handler
 
-const errorHandler = (error, request, response, next) => {
+const errorHandler = (error, req, res, next) => {
   console.error(error.message);
+  if (error.name === "ValidationError") {
+    return res.status(400).send({ error: error.message });
+  } else {
+    return res.status(400).send({error: error.message})
+  }
 
   next(error);
 };
